@@ -94,7 +94,7 @@ export function HeroSection() {
               
               <div className="relative rounded-2xl lg:rounded-3xl overflow-hidden border border-white/10 aspect-square lg:aspect-[4/5]">
                 <img
-                  src="https://images.unsplash.com/photo-1765275928007-168ee8590032?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjB2aWRlb2dyYXBoZXIlMjBwb3J0cmFpdHxlbnwxfHx8fDE3Njg0ODYxNDN8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
+                  src="/public/assets/hero.jpeg"
                   alt="Matheus - Profissional de Audiovisual"
                   className="w-full h-full object-cover"
                 />
