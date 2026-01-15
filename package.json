@@ -1,6 +1,7 @@
 {
-  "name": "matheushrj/portfolio",
+  "name": "@matheushrj/portfolio",
   "version": "0.1.0",
+  "homepage": "https://matheushrj.github.io/portfolio",
   "private": true,
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.3",
