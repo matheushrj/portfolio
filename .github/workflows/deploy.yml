@@ -35,15 +35,15 @@ jobs:
         run: |
           echo "=== root ==="
           ls -la
-          echo "=== dist ==="
-          ls -la dist || true
+          echo "=== build ==="
+          ls -la build || true
           echo "=== build ==="
           ls -la build || true
 
       - name: Upload artifact (Vite default)
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: build
 
   deploy:
     needs: build
