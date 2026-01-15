@@ -3,6 +3,7 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -10,22 +11,31 @@ permissions:
   id-token: write
 
 concurrency:
-  group: "pages"
+  group: pages
   cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
           node-version: 18
           cache: npm
 
-      - run: npm install
-      - run: npm run build
+      # Mais estável que npm install quando existe package-lock.json
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Build
+        run: npm run build
 
       - name: Copy public/assets into build
         run: |
@@ -37,8 +47,14 @@ jobs:
             ls -la public || true
             exit 1
           fi
-      - name: Check built index.html
+
+      - name: Debug build output
         run: |
+          echo "=== build ==="
+          ls -la build
+          echo "=== build/assets ==="
+          ls -la build/assets || true
+          echo "=== build/index.html (first lines) ==="
           sed -n '1,40p' build/index.html
 
       - name: Upload artifact
