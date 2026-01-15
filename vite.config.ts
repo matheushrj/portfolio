@@ -6,7 +6,7 @@
   export default defineConfig({
     plugins: [react()],
     // GitHub Pages: caminhos relativos para funcionar em /<repo>/
-    base: './portfolio',
+    base: './',
     resolve: {
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
       alias: {
