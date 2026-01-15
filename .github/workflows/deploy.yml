@@ -27,6 +27,17 @@ jobs:
       - run: npm install
       - run: npm run build
 
+      - name: Copy public/assets into build
+        run: |
+          mkdir -p build/assets
+          if [ -d "public/assets" ]; then
+            cp -R public/assets/* build/assets/
+          else
+            echo "public/assets não existe!"
+            ls -la public || true
+            exit 1
+          fi
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
@@ -35,11 +46,9 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
-
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
