@@ -1,0 +1,39 @@
+# Dependências
+node_modules/
+
+# Build do Vite
+dist/
+
+# Cache do Vite
+.vite/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Arquivos de ambiente
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Editor / SO
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+
+# Testes
+coverage/
+
+# GitHub Pages (se usar gh-pages local)
+gh-pages/
+
+# Arquivos temporários
+*.tmp
+*.temp
