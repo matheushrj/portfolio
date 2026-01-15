@@ -94,7 +94,7 @@ export function HeroSection() {
               
               <div className="relative rounded-2xl lg:rounded-3xl overflow-hidden border border-white/10 aspect-square lg:aspect-[4/5]">
                 <img
-                  src="/assets/hero.jpeg"
+                  src="./assets/hero.jpeg"
                   alt="Matheus - Profissional de Audiovisual"
                   className="w-full h-full object-cover"
                 />
