@@ -37,6 +37,9 @@ jobs:
             ls -la public || true
             exit 1
           fi
+      - name: Check built index.html
+        run: |
+          sed -n '1,40p' build/index.html
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
