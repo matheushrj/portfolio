@@ -160,7 +160,7 @@ function VideoCard({ video }: { video: Video }) {
 
 export function VideosSection() {
   return (
-    <section id="videos" className="py-20 lg:py-32 bg-gradient-to-b from-black via-purple-950/10 to-black">
+    <section id="videos" className="py-20 lg:py-32 bg-gradient-to-b from-black to-black">
       <div className="container mx-auto px-4 lg:px-8">
         {/* Header */}
         <motion.div
