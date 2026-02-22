@@ -39,16 +39,12 @@ export const videos = [
     maxW: "md",
   },
   {
-    // Exemplo de vídeo hospedado no Google Drive.
-    // Substitua o driveId pelo ID real do seu arquivo no Drive.
-    // Para obter o ID: abra o arquivo no Drive → clique em "Compartilhar" →
-    // copie o link → o ID está entre "/d/" e "/view" na URL.
-    title: 'Exemplo - Vídeo do Google Drive',
-    description: 'Vídeo hospedado diretamente no Google Drive',
-    objective: 'Demonstrar integração com Google Drive no portfólio',
+    title: 'Vídeo do Google Drive',
+    description: 'Vídeo hospedado no Google Drive',
+    objective: 'Produção audiovisual com distribuição via Google Drive',
     thumbnail: '',
     source: "drive" as VideoSource,
-    driveId: 'SEU_DRIVE_FILE_ID_AQUI',
+    driveId: '1kX_oCv5AaSx1djZ4gniVYLcPDCoatZ9v',
     category: 'Google Drive',
     aspect: "16/9",
     maxW: "xl",
