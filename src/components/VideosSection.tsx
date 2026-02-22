@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Masonry, { ResponsiveMasonry } from "react-responsive-masonry";
 import { motion } from "motion/react";
-import { Play, Pause, Volume2, VolumeX, ExternalLink } from "lucide-react";
+import { Play, Pause, Volume2, VolumeX } from "lucide-react";
 import { videos } from "../data/videos";
 
 type VideoItem = typeof videos[number];
@@ -35,23 +35,23 @@ function maxWClass(maxW?: VideoItem["maxW"]) {
 }
 
 /**
- * Converte o ID de um arquivo do Google Drive em uma URL de embed.
- * O arquivo deve estar compartilhado como "Qualquer pessoa com o link pode ver".
+ * Resolve a URL de reprodução do vídeo independente da origem.
+ * - "local": usa videoUrl diretamente.
+ * - "drive": constrói a URL de stream direto do Google Drive.
+ *   O browser consome o vídeo como qualquer outro MP4; nenhuma
+ *   referência ao Google Drive é exibida na interface.
  */
-function driveEmbedUrl(driveId: string): string {
-  return `https://drive.google.com/file/d/${driveId}/preview`;
+function resolveVideoUrl(video: VideoItem): string {
+  if (video.source === "drive") {
+    const id = "driveId" in video ? (video.driveId as string) : "";
+    return `https://drive.google.com/uc?export=download&id=${id}`;
+  }
+  return "videoUrl" in video ? (video.videoUrl as string) : "";
 }
 
-/**
- * Converte o ID de um arquivo do Google Drive em um link direto para abrir no Drive.
- */
-function driveViewUrl(driveId: string): string {
-  return `https://drive.google.com/file/d/${driveId}/view`;
-}
+// ─── Componente VideoCard ────────────────────────────────────────────────────
 
-// ─── Sub-componente: card para vídeo LOCAL ───────────────────────────────────
-
-function LocalVideoCard({
+function VideoCard({
   video,
   isActive,
   requestPlay,
@@ -65,6 +65,17 @@ function LocalVideoCard({
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  const videoUrl = useMemo(() => resolveVideoUrl(video), [video]);
+
+  const containerClass = useMemo(() => {
+    return cx(
+      "relative rounded-xl lg:rounded-2xl overflow-hidden border border-white/10 bg-black mb-6",
+      aspectClass(video.aspect),
+      maxWClass(video.maxW),
+      video.maxW && video.maxW !== "full" ? "mx-auto" : ""
+    );
+  }, [video.aspect, video.maxW]);
 
   // Pausa imediatamente ao perder o "ativo"
   useEffect(() => {
@@ -107,134 +118,6 @@ function LocalVideoCard({
     setIsMuted(next);
   };
 
-  const videoUrl = "videoUrl" in video ? video.videoUrl : undefined;
-
-  return (
-    <>
-      <video
-        ref={videoRef}
-        className="w-full h-full object-cover"
-        poster={video.thumbnail}
-        loop
-        playsInline
-        muted={isMuted}
-        preload="metadata"
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
-        onEnded={() => {
-          setIsPlaying(false);
-          onStopped();
-        }}
-      >
-        <source src={videoUrl} type="video/mp4" />
-      </video>
-
-      {/* Overlay escuro */}
-      <div
-        className={cx(
-          "absolute inset-0 bg-black/40 transition-opacity duration-300",
-          isPlaying ? "opacity-0 group-hover:opacity-100" : "opacity-100"
-        )}
-      />
-
-      {/* Botão Play/Pause */}
-      <button
-        onClick={togglePlay}
-        className={cx(
-          "absolute inset-0 flex items-center justify-center transition-opacity duration-300",
-          isPlaying ? "opacity-0 group-hover:opacity-100" : "opacity-100"
-        )}
-      >
-        <div className="w-16 h-16 lg:w-20 lg:h-20 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-all hover:scale-110">
-          {isPlaying ? (
-            <Pause className="w-8 h-8 lg:w-10 lg:h-10 text-black" fill="currentColor" />
-          ) : (
-            <Play className="w-8 h-8 lg:w-10 lg:h-10 text-black ml-1" fill="currentColor" />
-          )}
-        </div>
-      </button>
-
-      {/* Controle de mudo */}
-      <div
-        className={cx(
-          "absolute bottom-4 right-4 flex gap-2 transition-opacity duration-300",
-          isPlaying ? "opacity-0 group-hover:opacity-100" : "opacity-0"
-        )}
-      >
-        <button
-          onClick={toggleMute}
-          className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center hover:bg-black/80 transition-colors"
-        >
-          {isMuted ? (
-            <VolumeX className="w-5 h-5 text-white" />
-          ) : (
-            <Volume2 className="w-5 h-5 text-white" />
-          )}
-        </button>
-      </div>
-    </>
-  );
-}
-
-// ─── Sub-componente: card para vídeo do GOOGLE DRIVE ────────────────────────
-
-function DriveVideoCard({ video }: { video: VideoItem }) {
-  const driveId = "driveId" in video ? (video.driveId as string) : "";
-  const embedUrl = driveEmbedUrl(driveId);
-  const viewUrl = driveViewUrl(driveId);
-
-  return (
-    <>
-      <iframe
-        src={embedUrl}
-        className="w-full h-full"
-        allow="autoplay"
-        allowFullScreen
-        title={video.title}
-        style={{ border: "none" }}
-      />
-
-      {/* Overlay translúcido com ícone de link externo */}
-      <div className="absolute inset-0 bg-black/0 hover:bg-black/20 transition-colors duration-300 pointer-events-none" />
-
-      {/* Botão para abrir no Google Drive */}
-      <a
-        href={viewUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center hover:bg-black/80 transition-colors"
-        title="Abrir no Google Drive"
-      >
-        <ExternalLink className="w-5 h-5 text-white" />
-      </a>
-    </>
-  );
-}
-
-// ─── Componente principal: VideoCard ────────────────────────────────────────
-
-function VideoCard({
-  video,
-  isActive,
-  requestPlay,
-  onStopped,
-}: {
-  video: VideoItem;
-  isActive: boolean;
-  requestPlay: (id: VideoItem["id"], el: HTMLVideoElement) => void;
-  onStopped: () => void;
-}) {
-  const isDrive = video.source === "drive";
-
-  const containerClass = useMemo(() => {
-    return cx(
-      "relative rounded-xl lg:rounded-2xl overflow-hidden border border-white/10 bg-black mb-6",
-      aspectClass(video.aspect),
-      maxWClass(video.maxW),
-      video.maxW && video.maxW !== "full" ? "mx-auto" : ""
-    );
-  }, [video.aspect, video.maxW]);
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
@@ -244,16 +127,68 @@ function VideoCard({
       className="group relative"
     >
       <div className={containerClass}>
-        {isDrive ? (
-          <DriveVideoCard video={video} />
-        ) : (
-          <LocalVideoCard
-            video={video}
-            isActive={isActive}
-            requestPlay={requestPlay}
-            onStopped={onStopped}
-          />
-        )}
+        {/* Tag <video> nativa para todas as origens — local e Google Drive */}
+        <video
+          ref={videoRef}
+          className="w-full h-full object-cover"
+          poster={video.thumbnail || undefined}
+          loop
+          playsInline
+          muted={isMuted}
+          preload="metadata"
+          onPlay={() => setIsPlaying(true)}
+          onPause={() => setIsPlaying(false)}
+          onEnded={() => {
+            setIsPlaying(false);
+            onStopped();
+          }}
+        >
+          <source src={videoUrl} type="video/mp4" />
+        </video>
+
+        {/* Overlay escuro */}
+        <div
+          className={cx(
+            "absolute inset-0 bg-black/40 transition-opacity duration-300",
+            isPlaying ? "opacity-0 group-hover:opacity-100" : "opacity-100"
+          )}
+        />
+
+        {/* Botão Play/Pause */}
+        <button
+          onClick={togglePlay}
+          className={cx(
+            "absolute inset-0 flex items-center justify-center transition-opacity duration-300",
+            isPlaying ? "opacity-0 group-hover:opacity-100" : "opacity-100"
+          )}
+        >
+          <div className="w-16 h-16 lg:w-20 lg:h-20 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-all hover:scale-110">
+            {isPlaying ? (
+              <Pause className="w-8 h-8 lg:w-10 lg:h-10 text-black" fill="currentColor" />
+            ) : (
+              <Play className="w-8 h-8 lg:w-10 lg:h-10 text-black ml-1" fill="currentColor" />
+            )}
+          </div>
+        </button>
+
+        {/* Controle de mudo */}
+        <div
+          className={cx(
+            "absolute bottom-4 right-4 flex gap-2 transition-opacity duration-300",
+            isPlaying ? "opacity-0 group-hover:opacity-100" : "opacity-0"
+          )}
+        >
+          <button
+            onClick={toggleMute}
+            className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center hover:bg-black/80 transition-colors"
+          >
+            {isMuted ? (
+              <VolumeX className="w-5 h-5 text-white" />
+            ) : (
+              <Volume2 className="w-5 h-5 text-white" />
+            )}
+          </button>
+        </div>
 
         {/* Badge de categoria */}
         <div className="absolute top-4 left-4">
