@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Masonry, { ResponsiveMasonry } from "react-responsive-masonry";
 import { motion } from "motion/react";
-import { Play, Pause, Volume2, VolumeX } from "lucide-react";
+import { Play, Pause, Volume2, VolumeX, ExternalLink } from "lucide-react";
 import { videos } from "../data/videos";
 
 type VideoItem = typeof videos[number];
+
+// ─── Utilitários ────────────────────────────────────────────────────────────
 
 function cx(...classes: Array<string | false | undefined | null>) {
   return classes.filter(Boolean).join(" ");
@@ -32,7 +34,24 @@ function maxWClass(maxW?: VideoItem["maxW"]) {
   }
 }
 
-function VideoCard({
+/**
+ * Converte o ID de um arquivo do Google Drive em uma URL de embed.
+ * O arquivo deve estar compartilhado como "Qualquer pessoa com o link pode ver".
+ */
+function driveEmbedUrl(driveId: string): string {
+  return `https://drive.google.com/file/d/${driveId}/preview`;
+}
+
+/**
+ * Converte o ID de um arquivo do Google Drive em um link direto para abrir no Drive.
+ */
+function driveViewUrl(driveId: string): string {
+  return `https://drive.google.com/file/d/${driveId}/view`;
+}
+
+// ─── Sub-componente: card para vídeo LOCAL ───────────────────────────────────
+
+function LocalVideoCard({
   video,
   isActive,
   requestPlay,
@@ -44,27 +63,15 @@ function VideoCard({
   onStopped: () => void;
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(false); 
+  const [isMuted, setIsMuted] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  const containerClass = useMemo(() => {
-    return cx(
-      "relative rounded-xl lg:rounded-2xl overflow-hidden border border-white/10 bg-black mb-6",
-      aspectClass(video.aspect),
-      maxWClass(video.maxW),
-      video.maxW && video.maxW !== "full" ? "mx-auto" : ""
-    );
-  }, [video.aspect, video.maxW]);
-
-  // ✅ Pausa imediatamente ao perder o "ativo" (sem depender de isPlaying state)
+  // Pausa imediatamente ao perder o "ativo"
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
-
     if (!isActive) {
       el.pause();
-      // opcional: voltar pro começo quando troca de vídeo
-      // el.currentTime = 0;
       setIsPlaying(false);
     }
   }, [isActive]);
@@ -80,7 +87,6 @@ function VideoCard({
       return;
     }
 
-    // ✅ avisa o pai qual elemento vai tocar (pai pausa o anterior na hora)
     requestPlay(video.id, el);
 
     try {
@@ -96,11 +102,138 @@ function VideoCard({
     e.stopPropagation();
     const el = videoRef.current;
     if (!el) return;
-
     const next = !isMuted;
     el.muted = next;
     setIsMuted(next);
   };
+
+  const videoUrl = "videoUrl" in video ? video.videoUrl : undefined;
+
+  return (
+    <>
+      <video
+        ref={videoRef}
+        className="w-full h-full object-cover"
+        poster={video.thumbnail}
+        loop
+        playsInline
+        muted={isMuted}
+        preload="metadata"
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+        onEnded={() => {
+          setIsPlaying(false);
+          onStopped();
+        }}
+      >
+        <source src={videoUrl} type="video/mp4" />
+      </video>
+
+      {/* Overlay escuro */}
+      <div
+        className={cx(
+          "absolute inset-0 bg-black/40 transition-opacity duration-300",
+          isPlaying ? "opacity-0 group-hover:opacity-100" : "opacity-100"
+        )}
+      />
+
+      {/* Botão Play/Pause */}
+      <button
+        onClick={togglePlay}
+        className={cx(
+          "absolute inset-0 flex items-center justify-center transition-opacity duration-300",
+          isPlaying ? "opacity-0 group-hover:opacity-100" : "opacity-100"
+        )}
+      >
+        <div className="w-16 h-16 lg:w-20 lg:h-20 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-all hover:scale-110">
+          {isPlaying ? (
+            <Pause className="w-8 h-8 lg:w-10 lg:h-10 text-black" fill="currentColor" />
+          ) : (
+            <Play className="w-8 h-8 lg:w-10 lg:h-10 text-black ml-1" fill="currentColor" />
+          )}
+        </div>
+      </button>
+
+      {/* Controle de mudo */}
+      <div
+        className={cx(
+          "absolute bottom-4 right-4 flex gap-2 transition-opacity duration-300",
+          isPlaying ? "opacity-0 group-hover:opacity-100" : "opacity-0"
+        )}
+      >
+        <button
+          onClick={toggleMute}
+          className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center hover:bg-black/80 transition-colors"
+        >
+          {isMuted ? (
+            <VolumeX className="w-5 h-5 text-white" />
+          ) : (
+            <Volume2 className="w-5 h-5 text-white" />
+          )}
+        </button>
+      </div>
+    </>
+  );
+}
+
+// ─── Sub-componente: card para vídeo do GOOGLE DRIVE ────────────────────────
+
+function DriveVideoCard({ video }: { video: VideoItem }) {
+  const driveId = "driveId" in video ? (video.driveId as string) : "";
+  const embedUrl = driveEmbedUrl(driveId);
+  const viewUrl = driveViewUrl(driveId);
+
+  return (
+    <>
+      <iframe
+        src={embedUrl}
+        className="w-full h-full"
+        allow="autoplay"
+        allowFullScreen
+        title={video.title}
+        style={{ border: "none" }}
+      />
+
+      {/* Overlay translúcido com ícone de link externo */}
+      <div className="absolute inset-0 bg-black/0 hover:bg-black/20 transition-colors duration-300 pointer-events-none" />
+
+      {/* Botão para abrir no Google Drive */}
+      <a
+        href={viewUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center hover:bg-black/80 transition-colors"
+        title="Abrir no Google Drive"
+      >
+        <ExternalLink className="w-5 h-5 text-white" />
+      </a>
+    </>
+  );
+}
+
+// ─── Componente principal: VideoCard ────────────────────────────────────────
+
+function VideoCard({
+  video,
+  isActive,
+  requestPlay,
+  onStopped,
+}: {
+  video: VideoItem;
+  isActive: boolean;
+  requestPlay: (id: VideoItem["id"], el: HTMLVideoElement) => void;
+  onStopped: () => void;
+}) {
+  const isDrive = video.source === "drive";
+
+  const containerClass = useMemo(() => {
+    return cx(
+      "relative rounded-xl lg:rounded-2xl overflow-hidden border border-white/10 bg-black mb-6",
+      aspectClass(video.aspect),
+      maxWClass(video.maxW),
+      video.maxW && video.maxW !== "full" ? "mx-auto" : ""
+    );
+  }, [video.aspect, video.maxW]);
 
   return (
     <motion.div
@@ -111,61 +244,18 @@ function VideoCard({
       className="group relative"
     >
       <div className={containerClass}>
-        <video
-          ref={videoRef}
-          className="w-full h-full object-cover"
-          poster={video.thumbnail}
-          loop
-          playsInline
-          muted={isMuted}
-          preload="metadata"
-          onPlay={() => setIsPlaying(true)}
-          onPause={() => setIsPlaying(false)}
-          onEnded={() => {
-            setIsPlaying(false);
-            onStopped();
-          }}
-        >
-          <source src={video.videoUrl} type="video/mp4" />
-        </video>
+        {isDrive ? (
+          <DriveVideoCard video={video} />
+        ) : (
+          <LocalVideoCard
+            video={video}
+            isActive={isActive}
+            requestPlay={requestPlay}
+            onStopped={onStopped}
+          />
+        )}
 
-        <div
-          className={cx(
-            "absolute inset-0 bg-black/40 transition-opacity duration-300",
-            isPlaying ? "opacity-0 group-hover:opacity-100" : "opacity-100"
-          )}
-        />
-
-        <button
-          onClick={togglePlay}
-          className={cx(
-            "absolute inset-0 flex items-center justify-center transition-opacity duration-300",
-            isPlaying ? "opacity-0 group-hover:opacity-100" : "opacity-100"
-          )}
-        >
-          <div className="w-16 h-16 lg:w-20 lg:h-20 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-all hover:scale-110">
-            {isPlaying ? (
-              <Pause className="w-8 h-8 lg:w-10 lg:h-10 text-black" fill="currentColor" />
-            ) : (
-              <Play className="w-8 h-8 lg:w-10 lg:h-10 text-black ml-1" fill="currentColor" />
-            )}
-          </div>
-        </button>
-
-        <div
-          className={cx(
-            "absolute bottom-4 right-4 flex gap-2 transition-opacity duration-300",
-            isPlaying ? "opacity-0 group-hover:opacity-100" : "opacity-0"
-          )}
-        >
-          <button
-            onClick={toggleMute}
-            className="w-10 h-10 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center hover:bg-black/80 transition-colors"
-          >
-            {isMuted ? <VolumeX className="w-5 h-5 text-white" /> : <Volume2 className="w-5 h-5 text-white" />}
-          </button>
-        </div>
-
+        {/* Badge de categoria */}
         <div className="absolute top-4 left-4">
           <span className="px-3 py-1.5 bg-black/60 backdrop-blur-sm text-white text-sm rounded-full border border-white/10">
             {video.category}
@@ -186,21 +276,17 @@ function VideoCard({
   );
 }
 
+// ─── Seção principal ─────────────────────────────────────────────────────────
+
 export function VideosSection() {
   const [activeId, setActiveId] = useState<VideoItem["id"] | null>(null);
-
-  // ✅ guarda o elemento que está tocando agora (real, não state)
   const currentlyPlayingRef = useRef<HTMLVideoElement | null>(null);
 
   const requestPlay = (id: VideoItem["id"], el: HTMLVideoElement) => {
-    // pausa imediatamente o anterior, se existir e for diferente
     const prev = currentlyPlayingRef.current;
     if (prev && prev !== el) {
       prev.pause();
-      // opcional:
-      // prev.currentTime = 0;
     }
-
     currentlyPlayingRef.current = el;
     setActiveId(id);
   };
